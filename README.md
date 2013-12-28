@@ -2,6 +2,14 @@
 
 [すごい広島](http://great-h.github.io/) の参加者の一覧を Doorkeeper から取得して `_posts` ディレクトリに存在するイベントぺージに追加するためのプログラムです。
 
+# インストール
+
+```
+$ git clone https://github.com/great-h/auto_participant
+$ cd auto_participant
+$ cabal install
+```
+
 実行例
 
 ```

@@ -22,8 +22,6 @@ import Text.Parsec
 import Data.Yaml
 import qualified Data.HashMap.Strict as M
 
-import Control.Monad.Trans.Maybe
-
 main = do
   filename <- recentPost
   uri <- getDoorkeeperURL filename
