@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
 import qualified Data.Text.Lazy.IO as T
@@ -26,10 +26,15 @@ main = do
   filename <- recentPost
   uri <- getDoorkeeperURL filename
   participants <- getParticipants uri
-  let markdown = createParitipantsMarkdown . map mergeDefault $ participants
+  defaultUsers <- getDefaultUsers
+  let markdown = createParitipantsMarkdown
+                 . map (mergeDefault defaultUsers)
+                 $ participants
   forM_ markdown $ withFile filename AppendMode . flip T.hPutStr
 
-
+getDefaultUsers = do
+  users <- decodeFile "users.yml"
+  return . fromJust $ users
 
 getDoorkeeperURL :: FilePath -> IO String
 getDoorkeeperURL path = do
@@ -41,15 +46,16 @@ getDoorkeeperURL path = do
     String value -> return . TI.unpack $ value
 
 
-mergeDefault :: Participant -> (T.Text, T.Text)
-mergeDefault (name, urls) = (id, url)
+mergeDefault registUsers (participantName, urls) = (name, url)
 
-  where defaultUrl = getUrl urls
-        id = getID defaultUrl name
-        url = mergeUrl id defaultUrl
+  where participantUrl = getParticipantUrl urls
+        identity = getID participantUrl participantName
+        maybeUserValue = M.lookup identity registUsers
+        name = getName identity maybeUserValue
+        url = getUrl participantUrl maybeUserValue
 
-getUrl = head . getUrls
-getUrls urls = [ url |
+getParticipantUrl = head . getParticipantUrls
+getParticipantUrls urls = [ url |
                 is <- [isGitHub, isTwitter, isFacebook, isLinkedIn],
                 url <- urls,
                 is url ]
@@ -60,8 +66,21 @@ getID url name =
     Right str -> T.pack str
   where parser = (many $ noneOf "/" ) `sepBy` oneOf "/" >>= return . last
 
+getName id maybeUserValue = case maybeName of
+    Just name -> name
+    Nothing -> id
 
-mergeUrl id url = url
+  where maybeName = do
+          userValue <- maybeUserValue
+          M.lookup ("name" :: B.ByteString) userValue
+
+getUrl url maybeUserValue = case maybeUrl of
+    Just u -> u
+    Nothing -> url
+
+  where maybeUrl = do
+          userValue <- maybeUserValue
+          M.lookup "url" userValue
 
 createParitipantsMarkdown :: [(T.Text, T.Text)] -> [T.Text]
 createParitipantsMarkdown xs =
