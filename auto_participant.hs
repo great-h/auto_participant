@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 module Main (main) where
 
+import Prelude
 import qualified Data.Text.Lazy.IO as T
 import qualified Data.Text.Lazy as T
 import qualified Data.Text as TI
@@ -8,11 +10,13 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 
 import Data.Maybe
+import Data.String (IsString)
+import Data.Hashable (Hashable)
 import Control.Monad
 
 import Data.Text.Format
 
-import System.IO (Handle, IOMode(..), withFile)
+import System.IO (IOMode(..), withFile)
 
 import GreatH.RecentPost
 import GreatH.Participants
@@ -22,6 +26,7 @@ import Text.Parsec
 import Data.Yaml
 import qualified Data.HashMap.Strict as M
 
+main :: IO ()
 main = do
   filename <- recentPost
   uri <- getDoorkeeperURL filename
@@ -32,20 +37,24 @@ main = do
                  $ participants
   forM_ markdown $ withFile filename AppendMode . flip T.hPutStr
 
+getDefaultUsers :: IO (M.HashMap T.Text (M.HashMap BC.ByteString T.Text))
 getDefaultUsers = do
   users <- decodeFile "users.yml"
   return . fromJust $ users
 
 getDoorkeeperURL :: FilePath -> IO String
-getDoorkeeperURL path = do
-  maybe_object <- getFrontFormat path
-  maybe_string <- return $ fromJust $ do
-    object <- maybe_object
-    M.lookup "doorkeeper" $ object
-  case maybe_string of
+getDoorkeeperURL filepath = do
+  maybe_object <- getFrontFormat filepath
+  str <- return $ fromJust $ do
+    obj <- maybe_object
+    M.lookup "doorkeeper" $ obj
+  case str of
     String value -> return . TI.unpack $ value
+    _ -> error "not parameter doorkeeper"
 
 
+mergeDefault :: M.HashMap T.Text (M.HashMap BC.ByteString T.Text)
+                      -> (T.Text, [T.Text]) -> (T.Text, T.Text)
 mergeDefault registUsers (participantName, urls) = (name, url)
 
   where participantUrl = getParticipantUrl urls
@@ -54,26 +63,33 @@ mergeDefault registUsers (participantName, urls) = (name, url)
         name = getName identity maybeUserValue
         url = getUrl participantUrl maybeUserValue
 
+getParticipantUrl :: [T.Text] -> T.Text
 getParticipantUrl = head . getParticipantUrls
+getParticipantUrls :: [T.Text] -> [T.Text]
 getParticipantUrls urls = [ url |
                 is <- [isGitHub, isTwitter, isFacebook, isLinkedIn],
                 url <- urls,
                 is url ]
 
+getID :: T.Text -> T.Text -> T.Text
 getID url name =
   case parse parser "" $ T.unpack url of
-    Left err -> name
+    Left _ -> name
     Right str -> T.pack str
   where parser = (many $ noneOf "/" ) `sepBy` oneOf "/" >>= return . last
 
-getName id maybeUserValue = case maybeName of
+getName :: forall b. b -> Maybe (M.HashMap BC.ByteString b) -> b
+getName identity maybeUserValue = case maybeName of
     Just name -> name
-    Nothing -> id
+    Nothing -> identity
 
   where maybeName = do
           userValue <- maybeUserValue
           M.lookup ("name" :: B.ByteString) userValue
 
+getUrl :: forall b k.
+                (Eq k, Data.String.IsString k, Data.Hashable.Hashable k) =>
+                b -> Maybe (M.HashMap k b) -> b
 getUrl url maybeUserValue = case maybeUrl of
     Just u -> u
     Nothing -> url
@@ -105,18 +121,18 @@ isServiceBase valid str = isJust $ do
 
 
 getFrontFormat :: FilePath -> IO (Maybe Object)
-getFrontFormat path = do
-  file <- B.readFile path
+getFrontFormat filepath = do
+  file <- B.readFile filepath
   return . decode . parseFrontFormat $ file
 
 parseFrontFormat :: B.ByteString -> B.ByteString
 parseFrontFormat text = case parse parser "" text of
-  Left err -> ""
+  Left _ -> ""
   Right str -> str
 
   where parser = do
-          string "---\n"
-          notFollowedBy $ oneOf "\n"
+          _ <- string "---\n"
+          _ <- notFollowedBy $ oneOf "\n"
           rawYamlLines <- manyTill anyChar $ try (string "---\n")
-          optional $ oneOf "\n"
+          _ <- optional $ oneOf "\n"
           return . BC.pack $ rawYamlLines

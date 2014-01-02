@@ -12,14 +12,14 @@ recentPost = do
   return . snd . maximum $ do
     file <- files
     case parse filename "" file of
-      Left err -> mzero
-      Right xs -> return (xs, directory ++ file)
+      Left _ -> mzero
+      Right xs -> return (xs, directory ++ file) :: [(Int, FilePath)]
 
   where filename = do
                   year <- many1 digit
-                  oneOf "-"
+                  _ <- oneOf "-"
                   month <- many1 digit
-                  oneOf "-"
+                  _ <- oneOf "-"
                   day <- many1 digit
-                  anyChar
+                  _ <- anyChar
                   return $ read year * 10000 + read month * 100 + read day
