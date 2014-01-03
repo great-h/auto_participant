@@ -1,3 +1,4 @@
+{-# OPTIONS -Wall -Werror #-}
 module GreatH.RecentPost (recentPost) where
 
 import Control.Monad (mzero)

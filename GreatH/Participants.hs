@@ -1,5 +1,11 @@
-{-# LANGUAGE OverloadedStrings, QuasiQuotes #-}
-module GreatH.Participants (Participant, getParticipants, participants_mock) where
+{-# OPTIONS -Wall -Werror #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+module GreatH.Participants (
+  Participant,
+  getParticipants,
+  participants_mock
+  ) where
 
 import Text.XML.Cursor (fromDocument)
 import Text.HTML.DOM (parseLBS)
@@ -24,7 +30,7 @@ getParticipants uri = do
 
 users :: Cursor -> [Participant]
 users = map ((username &&& socials))
-          . queryT [jq| .user-profile |]
+        . queryT [jq| .user-profile |]
 
 username :: Cursor -> TL.Text
 username = innerHtml . queryT [jq| .user-name |]

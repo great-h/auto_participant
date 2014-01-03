@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/great-h/auto_participant.png)](https://travis-ci.org/great-h/auto_participant)
+
 # これは何
 
 [すごい広島](http://great-h.github.io/) の参加者の一覧を Doorkeeper から取得して `_posts` ディレクトリに存在するイベントぺージに追加するためのプログラムです。

@@ -1,3 +1,4 @@
+{-# OPTIONS -Wall -Werror #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 module Main (main) where
