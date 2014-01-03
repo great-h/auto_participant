@@ -20,6 +20,6 @@ executable auto_participant
   main-is: auto_participant.hs
   -- other-modules:       
   other-extensions:    OverloadedStrings, QuasiQuotes
-  build-depends:       base >=4.6 && <4.7, xml-conduit >=1.1 && <1.2, html-conduit >=1.1 && <1.2, bytestring >=0.10 && <0.11, text >=0.11 && <0.12, dom-selector >=0.2 && <0.3, http-conduit >=1.9 && <1.10, directory >=1.2 && <1.3, parsec >=3.1 && <3.2, unordered-containers, yaml, network, text-format
+  build-depends:       base >=4.6 && <4.7, xml-conduit >=1.1 && <1.2, html-conduit >=1.1 && <1.2, bytestring >=0.10 && <0.11, text >=0.11 && <0.12, dom-selector >=0.2 && <0.3, http-conduit >=1.9 && <1.10, directory >=1.2 && <1.3, parsec >=3.1 && <3.2, unordered-containers, yaml, network, text-format, hashable
   -- hs-source-dirs:      
   default-language:    Haskell2010
