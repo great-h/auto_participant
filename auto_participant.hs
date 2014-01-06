@@ -46,9 +46,9 @@ getDefaultUsers = do
 getDoorkeeperURL :: FilePath -> IO String
 getDoorkeeperURL filepath = do
   maybe_object <- getFrontFormat filepath
-  str <- return $ fromJust $ do
-    obj <- maybe_object
-    M.lookup "doorkeeper" $ obj
+  let str = fromJust $ do
+        obj <- maybe_object
+        M.lookup "doorkeeper" obj
   case str of
     String value -> return . TI.unpack $ value
     _ -> error "not parameter doorkeeper"
@@ -77,12 +77,10 @@ getID url name =
   case parse parser "" $ T.unpack url of
     Left _ -> name
     Right str -> T.pack str
-  where parser = (many $ noneOf "/" ) `sepBy` oneOf "/" >>= return . last
+  where parser = liftM last $ many (noneOf "/" ) `sepBy` oneOf "/"
 
 getName :: forall b. b -> Maybe (M.HashMap BC.ByteString b) -> b
-getName identity maybeUserValue = case maybeName of
-    Just name -> name
-    Nothing -> identity
+getName identity maybeUserValue = fromMaybe identity maybeName
 
   where maybeName = do
           userValue <- maybeUserValue
@@ -91,17 +89,15 @@ getName identity maybeUserValue = case maybeName of
 getUrl :: forall b k.
                 (Eq k, Data.String.IsString k, Data.Hashable.Hashable k) =>
                 b -> Maybe (M.HashMap k b) -> b
-getUrl url maybeUserValue = case maybeUrl of
-    Just u -> u
-    Nothing -> url
+getUrl url maybeUserValue = fromMaybe url maybeUrl
 
   where maybeUrl = do
           userValue <- maybeUserValue
           M.lookup "url" userValue
 
 createParitipantsMarkdown :: [(T.Text, T.Text)] -> [T.Text]
-createParitipantsMarkdown xs =
-  map (\ (n, uri) -> format "\n\n## [{}]({})\n" (n, uri)) xs
+createParitipantsMarkdown =
+  map (\ (n, uri) -> format "\n\n## [{}]({})\n" (n, uri))
 
 isFacebook :: T.Text -> Bool
 isFacebook = isServiceBase "www.facebook.com"
@@ -117,8 +113,8 @@ isLinkedIn = isServiceBase "www.linkedin.com"
 
 isServiceBase :: T.Text -> T.Text -> Bool
 isServiceBase valid str = isJust $ do
-  auth <- (parseURI $ T.unpack str) >>= uriAuthority
-  guard $ (T.pack $ uriRegName auth)  == valid
+  auth <- parseURI (T.unpack str) >>= uriAuthority
+  guard (T.pack (uriRegName auth)  == valid)
 
 
 getFrontFormat :: FilePath -> IO (Maybe Object)

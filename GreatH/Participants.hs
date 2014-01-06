@@ -4,20 +4,20 @@
 module GreatH.Participants (
   Participant,
   getParticipants,
-  participants_mock
+  participantsMock
   ) where
 
-import Text.XML.Cursor (fromDocument)
-import Text.HTML.DOM (parseLBS)
 import qualified Data.ByteString.Lazy as BS (readFile)
 import qualified Data.Text.Lazy as TL
 
-import Text.XML.Cursor (Cursor, attribute)
+import Text.HTML.DOM (parseLBS)
+import Text.XML.Cursor (Cursor, attribute, fromDocument)
 import Text.XML.Scraping (innerHtml)
 import Text.XML.Selector.TH
 
 import Network.HTTP.Conduit
 import Control.Arrow ((&&&))
+
 
 type Participant = (TL.Text, [TL.Text])
 
@@ -29,7 +29,7 @@ getParticipants uri = do
 
 
 users :: Cursor -> [Participant]
-users = map ((username &&& socials))
+users = map (username &&& socials)
         . queryT [jq| .user-profile |]
 
 username :: Cursor -> TL.Text
@@ -42,5 +42,5 @@ socials =  map (TL.fromStrict . Prelude.head . attribute "href")
 file :: IO Cursor
 file = fmap (fromDocument . parseLBS) $ BS.readFile "./23.html"
 
-participants_mock :: IO [Participant]
-participants_mock = file >>= return . users
+participantsMock :: IO [Participant]
+participantsMock = fmap users file
