@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                auto-participant
-version:             0.0.2.0
+version:             0.0.3.0
 synopsis:            insert participant list to event page
 -- description:         
 homepage:            https://github.com/great-h/auto_participant
