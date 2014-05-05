@@ -1,6 +1,8 @@
 {-# OPTIONS -Wall -Werror #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Main (main) where
 
 import Prelude
@@ -26,6 +28,9 @@ import Network.URI
 import Text.Parsec
 import Data.Yaml
 import qualified Data.HashMap.Strict as M
+
+instance FromJSON (M.HashMap BC.ByteString T.Text) where
+  parseJSON value = parseJSON value >>= return . M.fromList . map (\(k, v) -> (BC.pack k, v)) . M.toList
 
 main :: IO ()
 main = do
@@ -55,7 +60,7 @@ getDoorkeeperURL filepath = do
 
 
 mergeDefault :: M.HashMap T.Text (M.HashMap BC.ByteString T.Text)
-                      -> (T.Text, [T.Text]) -> (T.Text, T.Text)
+                      -> (T.Text, [T.Text]) -> (T.Text, Maybe T.Text)
 mergeDefault registUsers (participantName, urls) = (name, url)
 
   where participantUrl = getParticipantUrl urls
@@ -64,20 +69,23 @@ mergeDefault registUsers (participantName, urls) = (name, url)
         name = getName identity maybeUserValue
         url = getUrl participantUrl maybeUserValue
 
-getParticipantUrl :: [T.Text] -> T.Text
-getParticipantUrl = head . getParticipantUrls
+getParticipantUrl :: [T.Text] -> Maybe T.Text
+getParticipantUrl urls = case urls of
+  ( [ ] ) -> Nothing
+  _ -> return . head . getParticipantUrls $ urls
 getParticipantUrls :: [T.Text] -> [T.Text]
 getParticipantUrls urls = [ url |
                 is <- [isGitHub, isTwitter, isFacebook, isLinkedIn],
                 url <- urls,
                 is url ]
 
-getID :: T.Text -> T.Text -> T.Text
-getID url name =
-  case parse parser "" $ T.unpack url of
-    Left _ -> name
-    Right str -> T.pack str
-  where parser = liftM last $ many (noneOf "/" ) `sepBy` oneOf "/"
+getID :: Maybe T.Text -> T.Text -> T.Text
+getID murl name =
+  case murl of
+    ( Just url ) -> let parser = liftM last $ many (noneOf "/" ) `sepBy` oneOf "/" in case parse parser "" $ T.unpack url of
+      Left _ -> name
+      Right str -> T.pack str
+    Nothing -> name
 
 getName :: forall b. b -> Maybe (M.HashMap BC.ByteString b) -> b
 getName identity maybeUserValue = fromMaybe identity maybeName
@@ -88,16 +96,18 @@ getName identity maybeUserValue = fromMaybe identity maybeName
 
 getUrl :: forall b k.
                 (Eq k, Data.String.IsString k, Data.Hashable.Hashable k) =>
-                b -> Maybe (M.HashMap k b) -> b
-getUrl url maybeUserValue = fromMaybe url maybeUrl
+                Maybe b -> Maybe (M.HashMap k b) -> Maybe b
+getUrl murl maybeUserValue = fromMaybe murl maybeUrl
 
   where maybeUrl = do
           userValue <- maybeUserValue
-          M.lookup "url" userValue
+          return $ M.lookup "url" userValue
 
-createParitipantsMarkdown :: [(T.Text, T.Text)] -> [T.Text]
+createParitipantsMarkdown :: [(T.Text, Maybe T.Text)] -> [T.Text]
 createParitipantsMarkdown =
-  map (\ (n, uri) -> format "\n\n## [{}]({})\n" (n, uri))
+  map $ \ (n, muri) -> case muri of
+    ( Just uri ) -> format "\n\n## [{}]({})\n" (n, uri)
+    Nothing -> format "\n\n## {}\n" $ Only n
 
 isFacebook :: T.Text -> Bool
 isFacebook = isServiceBase "www.facebook.com"
