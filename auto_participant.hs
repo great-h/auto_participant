@@ -30,7 +30,10 @@ import Data.Yaml
 import qualified Data.HashMap.Strict as M
 
 instance FromJSON (M.HashMap BC.ByteString T.Text) where
-  parseJSON value = parseJSON value >>= return . M.fromList . map (\(k, v) -> (BC.pack k, v)) . M.toList
+  parseJSON value = parseJSON value >>= return . translate
+    where
+      translate = M.fromList . map pack . M.toList
+      pack (k, v) = (BC.pack k, v)
 
 main :: IO ()
 main = do
@@ -82,10 +85,11 @@ getParticipantUrls urls = [ url |
 getID :: Maybe T.Text -> T.Text -> T.Text
 getID murl name =
   case murl of
-    ( Just url ) -> let parser = liftM last $ many (noneOf "/" ) `sepBy` oneOf "/" in case parse parser "" $ T.unpack url of
+    ( Just url ) -> case parse parser "" $ T.unpack url of
       Left _ -> name
       Right str -> T.pack str
     Nothing -> name
+    where parser = liftM last $ many (noneOf "/" ) `sepBy` oneOf "/"
 
 getName :: forall b. b -> Maybe (M.HashMap BC.ByteString b) -> b
 getName identity maybeUserValue = fromMaybe identity maybeName
