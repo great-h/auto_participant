@@ -58,7 +58,7 @@ getDoorkeeperURL filepath = do
         obj <- maybe_object
         M.lookup "doorkeeper" obj
   case str of
-    String value -> return . TI.unpack $ value
+    String value -> return $ (TI.unpack $ value) ++ "/participants"
     _ -> error "not parameter doorkeeper"
 
 
